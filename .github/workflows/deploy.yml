@@ -1,16 +1,14 @@
-name: Docker Compose Deploy
+name: Deploy
 
 on:
   push:
-    branches: [ "master" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    branches: [ 'main' ]
 
 concurrency: serial
 
 env:
   CONTEXT_NAME: "remote"
-  VIRTUAL_HOST_NAME: "zeckson.com"
+  VIRTUAL_HOST_NAME: "vernam.zeckson.com"
 
 jobs:
   deploy:
@@ -27,22 +25,32 @@ jobs:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
 
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: arwynfr/actions-docker-context@v2
+      # 1. Configure SSH
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          docker_host: ssh://${{ secrets.SSH_REMOTE_URL }}
-          context_name: ${{ env.CONTEXT_NAME }}
-          ssh_cert: ${{ secrets.SSH_CERT }}
-          ssh_key: ${{ secrets.SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_KEY }}
 
-      - run: docker --context ${{ env.CONTEXT_NAME }} compose ps
+      # 2. Optional: Disable strict host checking
+      - name: Trust remote host
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_REMOTE_URL }}" | awk -F@ '{print $2}' >> ~/.ssh/known_hosts
+          ssh-keyscan $(echo "${{ secrets.SSH_REMOTE_URL }}" | awk -F@ '{print $2}') >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Deploy to remote host
-        run: docker --context ${{ env.CONTEXT_NAME }} compose up -d --build web
+      # 3. Create Docker context using SSH
+      - name: Create Docker context
+        run: |
+          docker context create remote \
+            --docker "host=ssh://${{ secrets.SSH_REMOTE_URL }}" || true
+          docker context use remote
+          docker info
+
+      # 4. Deploy using docker compose ON THE REMOTE HOST
+      - name: Deploy via Docker Compose
+        run: |
+          docker compose pull
+          docker compose up -d
