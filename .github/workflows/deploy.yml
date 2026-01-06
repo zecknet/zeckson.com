@@ -8,7 +8,7 @@ concurrency: serial
 
 env:
   CONTEXT_NAME: "remote"
-  VIRTUAL_HOST_NAME: "vernam.zeckson.com"
+  VIRTUAL_HOST_NAME: "zeckson.com"
 
 jobs:
   deploy:
