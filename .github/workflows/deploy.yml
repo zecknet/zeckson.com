@@ -52,5 +52,4 @@ jobs:
       # 4. Deploy using docker compose ON THE REMOTE HOST
       - name: Deploy via Docker Compose
         run: |
-          docker compose pull
           docker compose up -d
