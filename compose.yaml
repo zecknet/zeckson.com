@@ -2,7 +2,7 @@ services:
 
   web:
     image: zeckson.com:3
-    container_name: zeckson.com
+    container_name: zeckson-com
     build: .
     networks:
       - proxy
@@ -16,6 +16,6 @@ services:
 
 networks:
   proxy:
-    name: traefik-network
+    name: fornex-cloudflare
     external: true
 
